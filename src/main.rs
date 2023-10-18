@@ -302,6 +302,11 @@ fn main() {
      let sdl2_context=sdl2::init().expect("fallo inicializacion sdl2");
      let video_subsystem=sdl2_context.video().expect("no se obtuvo el subsystem video");
      let width=600;let height=800;
+     let mut timer=SystemTime::now();
+     let mut event_pump=sdl2_context.event_pump().expect("fallo el event pump");
+     let grid_x=(width-TETRIS_HEIGHT as u32 * 10)as i32 / 2;
+     let grid_y=(height-TETRIS_HEIGHT as u32 * 16)as i32 / 2;
+     let mut tetris=Tetris::new();
      let window=video_subsystem.window("Tetris", width, height)
           .position_centered()
           .build()
@@ -326,11 +331,6 @@ fn main() {
      }
      let textures=[texture!(255,69,69),texture!(255,220,69),texture!(237,150,37),
           texture!(171,99,237),texture!(77,149,239),texture!(39,218,225),texture!(45,216,47)];
-     let mut tetris=Tetris::new();
-     let mut timer=SystemTime::now();
-     let mut event_pump=sdl2_context.event_pump().expect("fallo el event pump");
-     let grid_x=(width-TETRIS_HEIGHT as u32 * 10)as i32 / 2;
-     let grid_y=(height-TETRIS_HEIGHT as u32 * 16)as i32 / 2;
      loop {
           if is_time_over(&tetris, &timer) {
                let mut make_permanent=false;
@@ -369,12 +369,39 @@ fn main() {
           let mut quit=false;
           if !handle_events(&mut tetris, &mut quit, &mut timer, &mut event_pump) {
                if let Some(ref mut piece) = tetris.current_piece {
-                    
+                    for (line_nb,line) in piece.states[piece.current_state as usize].iter().enumerate() {
+                         for (case_nb,case) in line.iter().enumerate() {
+                              if *case == 0 {
+                                  continue
+                              }
+                              canvas.copy(&textures[*case as usize - 1], 
+                                   None, 
+                                   Rect::new(
+                                        grid_x + (piece.x + case_nb as isize)as i32 * TETRIS_HEIGHT as i32, 
+                                        grid_y + (piece.y + line_nb)as i32 * TETRIS_HEIGHT as i32, 
+                                        TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32)
+                              ).expect("no se pudo copiar la textura en la ventana");
+                         }
+                    }
                }
           }
           if quit {
                print_game_information(&tetris);
                break
+          }
+          for (line_nb,line) in tetris.game_map.iter().enumerate() {
+               for (case_nb,case) in line.iter().enumerate() {
+                    if *case == 0 {
+                        continue
+                    }
+                    canvas.copy(&textures[*case as usize - 1], 
+                         None, 
+                         Rect::new(
+                              grid_x + case_nb as i32 * TETRIS_HEIGHT as i32, 
+                              grid_y + line_nb as i32 * TETRIS_HEIGHT as i32, 
+                              TETRIS_HEIGHT as u32, TETRIS_HEIGHT as u32)
+                    ).expect("no se pudo copiar la textura en la ventana");
+               }
           }
           canvas.present();
           sleep(Duration::new(0, 1_000_000_000u32 / 60));
